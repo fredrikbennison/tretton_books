@@ -1,3 +1,9 @@
 Short backend code assignment downloading https://books.toscrape.com
 
 
+Depends on:
+
+ * pip install asyncio
+ * pip install aiohttp
+ * pip install beautifulsoup4
+
