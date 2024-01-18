@@ -32,7 +32,7 @@ async def sourcedownload(name, session, sources):
                 if (len(filename) == 0):
                     filename = "index.html"
 
-                async with aiofiles.open(os.path.join(filePath, filename), "w") as outfile:
+                async with aiofiles.open(os.path.join(filePath, filename), "wb") as outfile:
                     await outfile.write(await response.read())
                     
         downloaded.append(url)
@@ -57,7 +57,7 @@ async def pageparser(name, session, pgqueue, sources):
                 # Find all links
                 for alink in soup.find_all('a'):
                     new_url = urllib.parse.urljoin(site + response.url.parent.path + "/", alink.attrs['href'])
-#                    await pgqueue.put(new_url)
+                    await pgqueue.put(new_url)
                     
                 # Find script sources
                 for source in soup.find_all('script'): 
@@ -69,6 +69,12 @@ async def pageparser(name, session, pgqueue, sources):
                 for source in soup.find_all('img'): 
                     if (source.has_attr('src') and not source.attrs['src'].startswith('http')):
                         new_url = urllib.parse.urljoin(site + response.url.parent.path + "/", source.attrs['src'])
+                        await sources.put(new_url)
+
+                # Find link sources
+                for source in soup.find_all('link'): 
+                    if (source.has_attr('href') and not source.attrs['href'].startswith('http')):
+                        new_url = urllib.parse.urljoin(site + response.url.parent.path + "/", source.attrs['href'])
                         await sources.put(new_url)
                     
                 if (response.url.parent.path.startswith('/')):
