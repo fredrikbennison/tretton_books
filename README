@@ -8,3 +8,8 @@ Depends on:
  * pip install aiofiles
  * pip install beautifulsoup4
 
+
+TODO:
+
+ * Error handling, i.e. exception handling in the tasks
+ * Parameters for web URL and download location

@@ -1,6 +1,5 @@
 import aiohttp
 import asyncio
-#import aiofiles
 import aiofiles.os
 import os
 import urllib.parse
@@ -16,6 +15,7 @@ async def sourcedownload(name, session, sources):
         # Retrieve URL from queue
         url = await sources.get()
 
+        # Don't download already downloaded url
         if not url in downloaded:
             print(f"{name} downloading: ", url)
             async with session.get(url) as response:
@@ -46,6 +46,7 @@ async def pageparser(name, session, pgqueue, sources):
         # Retrieve URL from queue
         url = await pgqueue.get()
 
+        # Don't parse already handled url
         if not url in downloaded:
 
             print(f"{name} parsing: ", url)
@@ -103,6 +104,7 @@ async def main():
     await aiofiles.os.makedirs(outputPath, exist_ok = True)
 
     async with aiohttp.ClientSession() as session:
+        # Create queues and add first url 
         parserQueue = asyncio.Queue()
         sourceQueue = asyncio.Queue()
         await parserQueue.put(site)
@@ -127,8 +129,6 @@ async def main():
         # Wait until all worker tasks are cancelled.
         await asyncio.gather(*tasks, return_exceptions=True)
                     
-#        await pageparser("task-1", session, parserQueue, sourceQueue)
-    
     print("\n\nDownload complete")
         
 asyncio.run(main())
