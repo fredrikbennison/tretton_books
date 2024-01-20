@@ -2,17 +2,48 @@
 using System.Reflection.Metadata;
 using HtmlAgilityPack;
 
-string baseUri = "https://books.toscrape.com/catalogue/category/books/travel_2/index.html";
-string outputDir = @"C:\Temp";
+string baseUri = "https://books.toscrape.com/";
+string outputDir = @"C:\Temp\";
 
 BlockingCollection<Uri> parserQueue = [];
 BlockingCollection<Uri> sourceQueue = [];
 ConcurrentDictionary<Uri, int> seenUris = new();
 HttpClient client = new();
 
+async Task downloadSource()
+{
+    while (true)
+    {
+        try {
+            Uri uri = sourceQueue.Take();
+            // Only parse new uris
+            if (seenUris.TryAdd(uri, 0))
+            {
+                string info = uri.ToString();
+                if (info.Length > 80)
+                {
+                    info = info[^80..];
+                }
+                Console.Write(String.Format("\rDownloading\t\t{0,-80}", info));
+                using HttpResponseMessage response = await client.GetAsync(uri);
+                response.EnsureSuccessStatusCode();
+
+                var filePath = Path.Combine(outputDir, uri.AbsolutePath[1..]);
+                var dir = Path.GetDirectoryName(filePath);
+                if (dir != null) {
+                    Directory.CreateDirectory(dir);
+                }
+                await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
+            }
+        }
+        catch(InvalidOperationException) {
+            break;
+        }
+    }
+}
+
 async Task parsePage()
 {
-
     while (parserQueue.TryTake(out Uri? uri))
     {
         // Only parse new uris
@@ -65,18 +96,29 @@ async Task parsePage()
                 }
             }
 
-        }
+            var filePath = Path.Combine(outputDir, uri.AbsolutePath[1..]);
+            if (Path.GetFileName(filePath)?.Length == 0) {
+                filePath = Path.Combine(filePath, "index.html");
+            }
 
-        // If the queue is empty, signal all tasks that the queue is complete
-        if (parserQueue.Count == 0) {
-            parserQueue.CompleteAdding();
+            var dir = Path.GetDirectoryName(filePath);
+            if (dir != null) {
+                Directory.CreateDirectory(dir);
+            }
+            await File.WriteAllTextAsync(filePath, responseBody);
         }
     }
 }
 
 parserQueue.Add(new Uri(baseUri));
-var tasks = new List<Task>() {parsePage()};
+var parseTasks = new List<Task>() {parsePage(), parsePage(), parsePage()};
+var downloadTasks = new List<Task>() {downloadSource(), downloadSource(), downloadSource()};
+await Task.WhenAll(parseTasks);
 
-await Task.WhenAll(tasks);
+// Parsing complete, no new sources will be added
+sourceQueue.CompleteAdding();
 
+await Task.WhenAll(downloadTasks);
+
+Console.WriteLine();
 Console.WriteLine("Download complete");
