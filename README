@@ -4,3 +4,10 @@ Dependencies:
 =============
 
 Html Agility Pack
+
+TODO:
+=====
+
+Error handling in general, i.e. bad output path, malformed HTML etc.
+Parameterise base URI and output path
+
